@@ -111,6 +111,32 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Tool Options */}
+        <div className="mb-8 text-center">
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Choose Your Interface
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 border border-gray-200 rounded-lg">
+                <h3 className="font-medium text-gray-900 mb-2">Current Interface</h3>
+                <p className="text-sm text-gray-600 mb-4">React-based interface with API generation</p>
+                <div className="text-sm text-gray-500">You're currently using this interface</div>
+              </div>
+              <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                <h3 className="font-medium text-gray-900 mb-2">Improved Interface</h3>
+                <p className="text-sm text-gray-600 mb-4">Clean, minimal design with better UX</p>
+                <a 
+                  href="/resume-tool.html" 
+                  className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  Try New Interface
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Input Section */}
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -148,7 +174,7 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Preview/Instructions Section */}
+          {/* Instructions Section */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               How It Works
@@ -195,7 +221,7 @@ export default function Home() {
             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
               <h4 className="font-medium text-yellow-800 mb-2">Features:</h4>
               <ul className="text-sm text-yellow-700 space-y-1">
-                <li>• Professional Cambria font formatting</li>
+                <li>• Professional font formatting</li>
                 <li>• Proper section headers with underlines</li>
                 <li>• ATS-friendly layout</li>
                 <li>• Matches your original CV structure</li>
@@ -208,6 +234,19 @@ export default function Home() {
               <p className="text-sm text-green-700">
                 Click "Load Sample" to see the expected JSON format, then replace with your own data.
               </p>
+            </div>
+
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <h4 className="font-medium text-blue-800 mb-2">New!</h4>
+              <p className="text-sm text-blue-700 mb-3">
+                Try our improved interface with better UX and cleaner design.
+              </p>
+              <a 
+                href="/resume-tool.html" 
+                className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                Switch to New Interface →
+              </a>
             </div>
           </div>
         </div>
