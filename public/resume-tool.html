@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4 max-w-4xl">
+        <h1 class="text-3xl font-bold mb-6 text-center mt-8">Resume Generator</h1>
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <div id="dropArea" class="p-10 border-2 border-dashed border-gray-300 rounded-md text-center cursor-pointer transition hover:border-blue-400">
+                <p class="font-medium">Drop your resume JSON here, or click to paste</p>
+                <p class="mt-2 text-sm text-gray-500">Paste JSON directly or load sample data to get started</p>
+            </div>
+            
+            <div id="errorMessage" class="mt-4 p-3 bg-red-50 text-red-700 rounded-md hidden"></div>
+            
+            <div class="mt-6 flex justify-center gap-4">
+                <button id="loadSample" class="px-6 py-3 rounded-md font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition">
+                    Load Sample Data
+                </button>
+                <button id="processButton" disabled class="px-6 py-3 rounded-md font-medium text-white bg-gray-400 cursor-not-allowed transition">
+                    Generate Resume PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden textarea for JSON input -->
+    <div id="jsonModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Resume JSON Data</h3>
+                <button id="closeModal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <textarea 
+                id="jsonTextarea" 
+                placeholder="Paste your resume JSON here..."
+                class="w-full h-96 p-4 border border-gray-300 rounded-md font-mono text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            ></textarea>
+            <div class="mt-4 flex justify-end gap-2">
+                <button id="cancelJson" class="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition">
+                    Cancel
+                </button>
+                <button id="validateJson" class="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition">
+                    Validate & Use
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+        
+        // Sample JSON data
+        const sampleData = {
+            "optimized_resume": {
+                "contact_info": {
+                    "name": "JOSHUA KWAKU AMOAH ANSAH",
+                    "location": "Leicester, UK",
+                    "phone": "+447909105376",
+                    "email": "j.ansah.prof@gmail.com",
+                    "linkedin": "linkedin.com/in/joshua-k-a-ansah"
+                },
+                "role_title": "CORPORATE DELIVERY PROJECT MANAGER",
+                "professional_summary": [
+                    "Strategic Project Manager with 6+ years' experience delivering complex projects and organizational improvements across public and private sectors, including direct government consulting work affecting 18M+ citizens",
+                    "Proven track record managing £10M+ project portfolios with 99% on-time delivery success while achieving £187K+ in efficiency savings through process improvement and change management",
+                    "Experienced in partnership working, stakeholder engagement, and driving business-as-usual transformation within governance frameworks",
+                    "Skilled in political awareness and communicating complex information to diverse audiences from front-line teams to C-Suite executives"
+                ],
+                "skills": {
+                    "technical_skills": "Project Portfolio Management, Change Management, Transformation Leadership, Business Case Development, Stakeholder Engagement, Partnership Working, Performance Standards, Compliance Management, Process Improvement, Governance Frameworks, Risk Management, Political Awareness, External Funding & Proposal Development",
+                    "tools_technologies": "Excel (Proficient), Project Management Tools (Jira, Trello, Tempo), Data Analytics, PowerBI, Microsoft Office Suite, Google Workspace, Python, SQL, AWS QuickSight, Process Documentation Systems, Confluence, Azure DevOps"
+                },
+                "work_experience": [
+                    {
+                        "role": "Programme Management Office Lead",
+                        "company": "Distributed",
+                        "location": "Remote",
+                        "duration": "Mar. 2022 – Present",
+                        "achievements": [
+                            "Delivered exceptional project governance across 35+ concurrent projects, maintaining 99% on-time, on-budget delivery through robust monitoring and corrective action protocols",
+                            "Achieved £187K+ annual cost savings through process automation and efficiency improvements, demonstrating strong value for money principles essential in public sector delivery",
+                            "Led organisational transformation by developing and managing 4 PMO Analysts over 2 years, scaling operations by 50% while maintaining consistent service delivery standards"
+                        ]
+                    }
+                ],
+                "education": [
+                    {
+                        "program": "McKinsey Forward Programme",
+                        "institution": "McKinsey Inc",
+                        "duration": "May 2021 – Sep. 2021"
+                    }
+                ],
+                "certifications": [
+                    {
+                        "name": "Lean Six Sigma Yellow Belt",
+                        "date": "Dec. 2022"
+                    }
+                ]
+            }
+        };
+
+        // Resume Generator class
+        class ResumeGenerator {
+            constructor() {
+                this.resumeData = null;
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                const dropArea = document.getElementById('dropArea');
+                const jsonModal = document.getElementById('jsonModal');
+                const jsonTextarea = document.getElementById('jsonTextarea');
+                const loadSample = document.getElementById('loadSample');
+                const processButton = document.getElementById('processButton');
+                const closeModal = document.getElementById('closeModal');
+                const cancelJson = document.getElementById('cancelJson');
+                const validateJson = document.getElementById('validateJson');
+
+                // Drop area click opens modal
+                dropArea.addEventListener('click', () => this.openModal());
+
+                // Sample data
+                loadSample.addEventListener('click', () => this.loadSampleData());
+
+                // Modal controls
+                closeModal.addEventListener('click', () => this.closeModal());
+                cancelJson.addEventListener('click', () => this.closeModal());
+                validateJson.addEventListener('click', () => this.validateAndUse());
+
+                // Process button
+                processButton.addEventListener('click', () => this.generatePDF());
+
+                // Close modal on outside click
+                jsonModal.addEventListener('click', (e) => {
+                    if (e.target === jsonModal) this.closeModal();
+                });
+            }
+
+            openModal() {
+                document.getElementById('jsonModal').classList.remove('hidden');
+                document.getElementById('jsonTextarea').focus();
+            }
+
+            closeModal() {
+                document.getElementById('jsonModal').classList.add('hidden');
+            }
+
+            validateAndUse() {
+                const textarea = document.getElementById('jsonTextarea');
+                const content = textarea.value.trim();
+                
+                if (!content) {
+                    this.showError('Please paste JSON data');
+                    return;
+                }
+
+                try {
+                    const jsonData = JSON.parse(content);
+                    
+                    if (!jsonData.optimized_resume) {
+                        this.showError('JSON must contain "optimized_resume" object');
+                        return;
+                    }
+
+                    this.resumeData = jsonData;
+                    this.enableProcessButton();
+                    this.closeModal();
+                    this.hideError();
+                    
+                    // Update drop area to show success
+                    const dropArea = document.getElementById('dropArea');
+                    dropArea.innerHTML = `
+                        <div class="text-green-600">
+                            <svg class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <p class="font-medium">Resume JSON loaded successfully</p>
+                            <p class="text-sm text-gray-500 mt-1">Click "Generate Resume PDF" to create your resume</p>
+                        </div>
+                    `;
+                    
+                } catch (error) {
+                    this.showError(`Invalid JSON: ${error.message}`);
+                }
+            }
+
+            loadSampleData() {
+                document.getElementById('jsonTextarea').value = JSON.stringify(sampleData, null, 2);
+                this.openModal();
+            }
+
+            enableProcessButton() {
+                const button = document.getElementById('processButton');
+                button.disabled = false;
+                button.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            }
+
+            showError(message) {
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.textContent = message;
+                errorDiv.classList.remove('hidden');
+            }
+
+            hideError() {
+                document.getElementById('errorMessage').classList.add('hidden');
+            }
+
+            generatePDF() {
+                if (!this.resumeData) return;
+
+                const button = document.getElementById('processButton');
+                const originalText = button.innerHTML;
+                
+                button.disabled = true;
+                button.innerHTML = `
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 inline-block text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating PDF...
+                `;
+
+                try {
+                    this.createPDF();
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                } catch (error) {
+                    this.showError(`PDF generation failed: ${error.message}`);
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            }
+
+            createPDF() {
+                const resume = this.resumeData.optimized_resume;
+                const doc = new jsPDF('p', 'pt', 'a4');
+                
+                let y = 50;
+                const margin = 54;
+                const pageWidth = doc.internal.pageSize.width;
+                const contentWidth = pageWidth - 2 * margin;
+
+                // Header - Name (centered)
+                doc.setFontSize(16);
+                doc.setFont('times', 'bold');
+                const nameWidth = doc.getTextWidth(resume.contact_info.name);
+                doc.text(resume.contact_info.name, (pageWidth - nameWidth) / 2, y);
+                y += 25;
+
+                // Contact info (centered)
+                const contactInfo = `${resume.contact_info.location} | ${resume.contact_info.phone} | ${resume.contact_info.email} | ${resume.contact_info.linkedin}`;
+                doc.setFontSize(10);
+                doc.setFont('times', 'normal');
+                const contactWidth = doc.getTextWidth(contactInfo);
+                doc.text(contactInfo, (pageWidth - contactWidth) / 2, y);
+                y += 30;
+
+                // Role title and summary
+                const roleTitle = `${resume.role_title} PROFESSIONAL SUMMARY`;
+                y = this.addSectionHeader(doc, roleTitle, margin, y);
+                
+                resume.professional_summary.forEach(point => {
+                    y = this.addBulletPoint(doc, point, margin, y, contentWidth);
+                });
+                y += 15;
+
+                // Skills
+                y = this.addSectionHeader(doc, 'SKILLS', margin, y);
+                y = this.addSkillsSection(doc, resume.skills, margin, y, contentWidth);
+
+                // Work Experience
+                y = this.addSectionHeader(doc, 'WORK EXPERIENCE', margin, y);
+                resume.work_experience.forEach(exp => {
+                    y = this.addExperienceEntry(doc, exp, margin, y, contentWidth, pageWidth);
+                });
+
+                // Education
+                y = this.addSectionHeader(doc, 'EDUCATION', margin, y);
+                resume.education.forEach(edu => {
+                    y = this.addEducationEntry(doc, edu, margin, y, pageWidth);
+                });
+
+                // Certifications
+                y = this.addSectionHeader(doc, 'LICENCES/CERTIFICATIONS', margin, y);
+                resume.certifications.forEach(cert => {
+                    y = this.addCertificationEntry(doc, cert, margin, y, pageWidth);
+                });
+
+                doc.save(this.generateFileName());
+            }
+
+            addSectionHeader(doc, title, x, y) {
+                doc.setFontSize(11);
+                doc.setFont('times', 'bold');
+                doc.text(title, x, y);
+                
+                const textWidth = doc.getTextWidth(title);
+                doc.line(x, y + 3, x + textWidth, y + 3);
+                
+                return y + 18;
+            }
+
+            addBulletPoint(doc, text, x, y, maxWidth) {
+                doc.setFontSize(10);
+                doc.setFont('times', 'normal');
+                
+                doc.text('•', x, y);
+                const lines = doc.splitTextToSize(text, maxWidth - 15);
+                doc.text(lines, x + 12, y);
+                
+                return y + (lines.length * 12) + 3;
+            }
+
+            addSkillsSection(doc, skills, x, y, maxWidth) {
+                doc.setFontSize(10);
+                
+                doc.setFont('times', 'bold');
+                doc.text('Technical Skills:', x, y);
+                doc.setFont('times', 'normal');
+                const techLines = doc.splitTextToSize(skills.technical_skills, maxWidth - 80);
+                doc.text(techLines, x + 85, y);
+                y += (techLines.length * 12) + 8;
+
+                doc.setFont('times', 'bold');
+                doc.text('Tools & Technologies:', x, y);
+                doc.setFont('times', 'normal');
+                const toolLines = doc.splitTextToSize(skills.tools_technologies, maxWidth - 110);
+                doc.text(toolLines, x + 115, y);
+                y += (toolLines.length * 12) + 15;
+
+                return y;
+            }
+
+            addExperienceEntry(doc, exp, x, y, maxWidth, pageWidth) {
+                const jobTitle = `${exp.role}, ${exp.company}${exp.location ? ', ' + exp.location : ''}`;
+                doc.setFontSize(10);
+                doc.setFont('times', 'bold');
+                doc.text(jobTitle, x, y);
+                
+                const durationWidth = doc.getTextWidth(exp.duration);
+                doc.text(exp.duration, pageWidth - 54 - durationWidth, y);
+                y += 15;
+
+                exp.achievements.forEach(achievement => {
+                    y = this.addBulletPoint(doc, achievement, x, y, maxWidth);
+                });
+                
+                return y + 10;
+            }
+
+            addEducationEntry(doc, edu, x, y, pageWidth) {
+                const eduText = `${edu.program} | ${edu.institution}`;
+                doc.setFontSize(10);
+                doc.setFont('times', 'bold');
+                doc.text(eduText, x, y);
+                
+                const durationWidth = doc.getTextWidth(edu.duration);
+                doc.text(edu.duration, pageWidth - 54 - durationWidth, y);
+                
+                return y + 15;
+            }
+
+            addCertificationEntry(doc, cert, x, y, pageWidth) {
+                doc.setFontSize(10);
+                doc.setFont('times', 'bold');
+                doc.text(cert.name, x, y);
+                
+                const dateWidth = doc.getTextWidth(cert.date);
+                doc.text(cert.date, pageWidth - 54 - dateWidth, y);
+                
+                return y + 15;
+            }
+
+            generateFileName() {
+                const now = new Date();
+                const timestamp = now.toISOString().slice(0, 19).replace(/[:.]/g, '-');
+                return `resume_${timestamp}.pdf`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new ResumeGenerator();
+        });
+    </script>
+</body>
+</html>
